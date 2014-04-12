@@ -149,6 +149,8 @@ static void insertSelectOptions(SelectStmt *stmt,
 								WithClause *withClause,
 								core_yyscan_t yyscanner);
 static Node *makeSetOp(SetOperation op, bool all, Node *larg, Node *rarg);
+static Node *makeRangeSetOp(SetOperation op, bool all, Node *larg,
+							Node *rarg, Node *range);
 static Node *doNegate(Node *n, int location);
 static void doNegateFloat(Value *v);
 static Node *makeAArrayExpr(List *elements, int location);
@@ -205,6 +207,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 	RangeVar			*range;
 	IntoClause			*into;
 	WithClause			*with;
+	RangeClause			*rangeclause;
 	A_Indices			*aind;
 	ResTarget			*target;
 	struct PrivTarget	*privtarget;
@@ -499,6 +502,8 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 				opt_frame_clause frame_extent frame_bound
 %type <str>		opt_existing_window_name
 %type <boolean> opt_if_not_exists
+
+%type <node>	range_sexpr
 
 /*
  * Non-keyword token types.  These are hard-wired into the "flex" lexer.
@@ -9499,6 +9504,18 @@ simple_select:
 				{
 					$$ = makeSetOp(SETOP_EXCEPT, $3, $1, $4);
 				}
+			| select_clause RANGE UNION '(' range_sexpr opt_all select_clause ')'
+				{
+					$$ = makeRangeSetOp(SETOP_RANGE_UNION, $6, $1, $7, $5);
+				}
+			| select_clause RANGE INTERSECT '(' range_sexpr opt_all select_clause ')'
+				{
+					$$ = makeRangeSetOp(SETOP_RANGE_INTERSECT, $6, $1, $7, $5);
+				}
+			| select_clause RANGE EXCEPT '(' range_sexpr opt_all select_clause ')'
+				{
+					$$ = makeRangeSetOp(SETOP_RANGE_EXCEPT, $6, $1, $7, $5);
+				}
 		;
 
 /*
@@ -9523,6 +9540,23 @@ with_clause:
 				$$->ctes = $3;
 				$$->recursive = true;
 				$$->location = @1;
+			}
+		;
+
+range_sexpr:
+		 '(' WITH expr_list ')'
+			{
+				RangeClause *n = makeNode(RangeClause);
+				n->rangevar = $3;
+				n->newrange = $3;
+				$$ = (Node *) n;
+			}
+		| '(' WITH expr_list AS expr_list ')'
+			{
+				RangeClause *n = makeNode(RangeClause);
+				n->rangevar = $3;
+				n->newrange = $5;
+				$$ = (Node *) n;
 			}
 		;
 
@@ -9636,6 +9670,7 @@ opt_all:	ALL										{ $$ = TRUE; }
 opt_distinct:
 			DISTINCT								{ $$ = list_make1(NIL); }
 			| DISTINCT ON '(' expr_list ')'			{ $$ = $4; }
+			| DISTINCT ON RANGE range_sexpr			{ $$ = list_make1($4); }
 			| ALL									{ $$ = NIL; }
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
@@ -9757,6 +9792,7 @@ first_or_next: FIRST_P								{ $$ = 0; }
 
 group_clause:
 			GROUP_P BY expr_list					{ $$ = $3; }
+			| GROUP_P BY RANGE range_sexpr expr_list { $$ = $5; }
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
 
@@ -13599,6 +13635,18 @@ insertSelectOptions(SelectStmt *stmt,
 
 static Node *
 makeSetOp(SetOperation op, bool all, Node *larg, Node *rarg)
+{
+	SelectStmt *n = makeNode(SelectStmt);
+
+	n->op = op;
+	n->all = all;
+	n->larg = (SelectStmt *) larg;
+	n->rarg = (SelectStmt *) rarg;
+	return (Node *) n;
+}
+
+static Node *
+makeRangeSetOp(SetOperation op, bool all, Node *larg, Node *rarg, Node *range)
 {
 	SelectStmt *n = makeNode(SelectStmt);
 

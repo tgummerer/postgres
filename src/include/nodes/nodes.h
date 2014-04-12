@@ -390,6 +390,7 @@ typedef enum NodeTag
 	T_IndexElem,
 	T_Constraint,
 	T_DefElem,
+	T_RangeClause,
 	T_RangeTblEntry,
 	T_RangeTblFunction,
 	T_WithCheckOption,

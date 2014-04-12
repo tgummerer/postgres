@@ -980,6 +980,17 @@ typedef struct WithClause
 } WithClause;
 
 /*
+ * RangeClause-
+ *    representation of RANGE clause
+ */
+typedef struct RangeClause
+{
+	NodeTag		type;
+	List	   *rangevar;
+	List	   *newrange;
+} RangeClause;
+
+/*
  * CommonTableExpr -
  *	   representation of WITH list element
  *
@@ -1080,7 +1091,10 @@ typedef enum SetOperation
 	SETOP_NONE = 0,
 	SETOP_UNION,
 	SETOP_INTERSECT,
-	SETOP_EXCEPT
+	SETOP_EXCEPT,
+	SETOP_RANGE_UNION,
+	SETOP_RANGE_INTERSECT,
+	SETOP_RANGE_EXCEPT
 } SetOperation;
 
 typedef struct SelectStmt
@@ -1099,6 +1113,7 @@ typedef struct SelectStmt
 	List	   *groupClause;	/* GROUP BY clauses */
 	Node	   *havingClause;	/* HAVING conditional-expression */
 	List	   *windowClause;	/* WINDOW window_name AS (...), ... */
+	Node	   *rangeClause;    /* the RANGE clause */
 
 	/*
 	 * In a "leaf" node representing a VALUES list, the above fields are all
