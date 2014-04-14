@@ -973,6 +973,10 @@ exec_simple_query(const char *query_string)
 
 		plantree_list = pg_plan_queries(querytree_list, 0, NULL);
 
+		pprint(parsetree_item);
+		pprint(querytree_list);
+		pprint(plantree_list);
+		
 		/* Done with the snapshot used for parsing/planning */
 		if (snapshot_set)
 			PopActiveSnapshot();
