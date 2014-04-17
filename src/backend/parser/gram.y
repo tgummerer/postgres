@@ -9544,7 +9544,7 @@ with_clause:
 		;
 
 range_sexpr:
-		 '(' WITH expr_list ')'
+		'(' WITH expr_list ')'
 			{
 				RangeClause *n = makeNode(RangeClause);
 				n->rangevar = $3;
@@ -9792,7 +9792,13 @@ first_or_next: FIRST_P								{ $$ = 0; }
 
 group_clause:
 			GROUP_P BY expr_list					{ $$ = $3; }
-			| GROUP_P BY RANGE range_sexpr expr_list { $$ = $5; }
+			| GROUP_P BY RANGE range_sexpr expr_list
+				{
+					GroupRangeClause *g = makeNode(GroupRangeClause);
+					g->expr_list = $5;
+					g->range = $4;
+					$$ = list_make1(g);
+				}
 			| /*EMPTY*/								{ $$ = NIL; }
 		;
 
@@ -12992,7 +12998,6 @@ unreserved_keyword:
 			| PROCEDURE
 			| PROGRAM
 			| QUOTE
-			| RANGE
 			| READ
 			| REASSIGN
 			| RECHECK
@@ -13244,6 +13249,7 @@ reserved_keyword:
 			| ORDER
 			| PLACING
 			| PRIMARY
+			| RANGE
 			| REFERENCES
 			| RETURNING
 			| SELECT

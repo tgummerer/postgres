@@ -4721,6 +4721,18 @@ get_setop_query(Node *setOp, Query *query, deparse_context *context,
 				appendContextKeyword(context, "EXCEPT ",
 									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
 				break;
+			case SETOP_RANGE_UNION:
+				appendContextKeyword(context, "RANGE UNION ",
+									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
+				break;
+			case SETOP_RANGE_INTERSECT:
+				appendContextKeyword(context, "RANGE INTERSECT ",
+									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
+				break;
+			case SETOP_RANGE_EXCEPT:
+				appendContextKeyword(context, "RANGE EXCEPT ",
+									 -PRETTYINDENT_STD, PRETTYINDENT_STD, 0);
+				break;
 			default:
 				elog(ERROR, "unrecognized set op: %d",
 					 (int) op->op);

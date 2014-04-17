@@ -991,6 +991,17 @@ typedef struct RangeClause
 } RangeClause;
 
 /*
+ * GroupRangeClause-
+ *    representation of GROUP BY RANGE clause
+ */
+typedef struct GroupRangeClause
+{
+	NodeTag			type;
+	List		   *expr_list;
+	Node		   *range;
+} GroupRangeClause;
+
+/*
  * CommonTableExpr -
  *	   representation of WITH list element
  *

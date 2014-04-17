@@ -2326,6 +2326,15 @@ _outWithClause(StringInfo str, const WithClause *node)
 }
 
 static void
+_outRangeClause(StringInfo str, const RangeClause *node)
+{
+	WRITE_NODE_TYPE("RANGECLAUSE");
+
+	WRITE_NODE_FIELD(rangevar);
+	WRITE_NODE_FIELD(newrange);
+}
+
+static void
 _outCommonTableExpr(StringInfo str, const CommonTableExpr *node)
 {
 	WRITE_NODE_TYPE("COMMONTABLEEXPR");
@@ -3159,6 +3168,9 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_WithClause:
 				_outWithClause(str, obj);
+				break;
+			case T_RangeClause:
+				_outRangeClause(str, obj);
 				break;
 			case T_CommonTableExpr:
 				_outCommonTableExpr(str, obj);

@@ -966,6 +966,50 @@ checkWellFormedSelectStmt(SelectStmt *stmt, CteState *cstate)
 											   cstate);
 				/* stmt->withClause is intentionally ignored here */
 				break;
+			case SETOP_RANGE_UNION:
+				raw_expression_tree_walker((Node *) stmt,
+										   checkWellFormedRecursionWalker,
+										   (void *) cstate);
+				break;
+			case SETOP_RANGE_INTERSECT:
+				if (stmt->all)
+					cstate->context = RECURSION_INTERSECT;
+				checkWellFormedRecursionWalker((Node *) stmt->larg,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->rarg,
+											   cstate);
+				cstate->context = save_context;
+				checkWellFormedRecursionWalker((Node *) stmt->sortClause,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->limitOffset,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->limitCount,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->lockingClause,
+											   cstate);
+				/* TODO: stmt->rangeClause should probably not be ignored */
+				/* stmt->withClause is intentionally ignored here */
+				break;
+			case SETOP_RANGE_EXCEPT:
+				if (stmt->all)
+					cstate->context = RECURSION_EXCEPT;
+				checkWellFormedRecursionWalker((Node *) stmt->larg,
+											   cstate);
+				cstate->context = RECURSION_EXCEPT;
+				checkWellFormedRecursionWalker((Node *) stmt->rarg,
+											   cstate);
+				cstate->context = save_context;
+				checkWellFormedRecursionWalker((Node *) stmt->sortClause,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->limitOffset,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->limitCount,
+											   cstate);
+				checkWellFormedRecursionWalker((Node *) stmt->lockingClause,
+											   cstate);
+				/* TODO: stmt->rangeClause should probably not be ignored */
+				/* stmt->withClause is intentionally ignored here */
+				break;
 			default:
 				elog(ERROR, "unrecognized set op: %d",
 					 (int) stmt->op);
