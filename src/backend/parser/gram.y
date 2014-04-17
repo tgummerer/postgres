@@ -503,7 +503,7 @@ static Node *makeRecursiveViewSelect(char *relname, List *aliases, Node *query);
 %type <str>		opt_existing_window_name
 %type <boolean> opt_if_not_exists
 
-%type <node>	range_sexpr
+%type <node>	range_sexpr range_dexpr
 
 /*
  * Non-keyword token types.  These are hard-wired into the "flex" lexer.
@@ -9560,6 +9560,17 @@ range_sexpr:
 			}
 		;
 
+range_dexpr:
+		'(' WITH expr_list INTERSECT expr_list AS expr_list ')'
+			{
+				RangeIntersectClause *g = makeNode(RangeIntersectClause);
+				g->column = $3;
+				g->intersect_column = $5;
+				g->new_column = $7;
+				$$ = (Node *) g;
+			}
+		;
+
 cte_list:
 		common_table_expr						{ $$ = list_make1($1); }
 		| cte_list ',' common_table_expr		{ $$ = lappend($1, $3); }
@@ -10006,6 +10017,7 @@ joined_table:
 					n->larg = $1;
 					n->rarg = $4;
 					n->usingClause = NIL;
+					n->rangeClause = NULL;
 					n->quals = NULL;
 					$$ = n;
 				}
@@ -10020,6 +10032,7 @@ joined_table:
 						n->usingClause = (List *) $5; /* USING clause */
 					else
 						n->quals = $5; /* ON clause */
+					n->rangeClause = NULL;
 					$$ = n;
 				}
 			| table_ref JOIN table_ref join_qual
@@ -10034,6 +10047,7 @@ joined_table:
 						n->usingClause = (List *) $4; /* USING clause */
 					else
 						n->quals = $4; /* ON clause */
+					n->rangeClause = NULL;
 					$$ = n;
 				}
 			| table_ref NATURAL join_type JOIN table_ref
@@ -10044,6 +10058,7 @@ joined_table:
 					n->larg = $1;
 					n->rarg = $5;
 					n->usingClause = NIL; /* figure out which columns later... */
+					n->rangeClause = NULL;
 					n->quals = NULL; /* fill later */
 					$$ = n;
 				}
@@ -10056,6 +10071,75 @@ joined_table:
 					n->larg = $1;
 					n->rarg = $4;
 					n->usingClause = NIL; /* figure out which columns later... */
+					n->rangeClause = NULL;
+					n->quals = NULL; /* fill later */
+					$$ = n;
+				}
+			/* Range syntax */
+			| table_ref CROSS JOIN RANGE range_dexpr table_ref
+				{
+					/* CROSS JOIN is same as unqualified inner join */
+					JoinExpr *n = makeNode(JoinExpr);
+					n->jointype = JOIN_INNER;
+					n->isNatural = FALSE;
+					n->larg = $1;
+					n->rarg = $6;
+					n->usingClause = NIL;
+					n->rangeClause = $5;
+					n->quals = NULL;
+					$$ = n;
+				}
+			| table_ref join_type JOIN RANGE range_dexpr table_ref join_qual
+				{
+					JoinExpr *n = makeNode(JoinExpr);
+					n->jointype = $2;
+					n->isNatural = FALSE;
+					n->larg = $1;
+					n->rarg = $6;
+					if ($7 != NULL && IsA($7, List))
+						n->usingClause = (List *) $7; /* USING clause */
+					else
+						n->quals = $7; /* ON clause */
+					n->rangeClause = $5;
+					$$ = n;
+				}
+			| table_ref JOIN RANGE range_dexpr table_ref join_qual
+				{
+					/* letting join_type reduce to empty doesn't work */
+					JoinExpr *n = makeNode(JoinExpr);
+					n->jointype = JOIN_INNER;
+					n->isNatural = FALSE;
+					n->larg = $1;
+					n->rarg = $5;
+					if ($4 != NULL && IsA($6, List))
+						n->usingClause = (List *) $6; /* USING clause */
+					else
+						n->quals = $6; /* ON clause */
+					n->rangeClause = $4;
+					$$ = n;
+				}
+			| table_ref NATURAL join_type JOIN RANGE range_dexpr table_ref
+				{
+					JoinExpr *n = makeNode(JoinExpr);
+					n->jointype = $3;
+					n->isNatural = TRUE;
+					n->larg = $1;
+					n->rarg = $7;
+					n->usingClause = NIL; /* figure out which columns later... */
+					n->rangeClause = $6;
+					n->quals = NULL; /* fill later */
+					$$ = n;
+				}
+			| table_ref NATURAL JOIN RANGE range_dexpr table_ref
+				{
+					/* letting join_type reduce to empty doesn't work */
+					JoinExpr *n = makeNode(JoinExpr);
+					n->jointype = JOIN_INNER;
+					n->isNatural = TRUE;
+					n->larg = $1;
+					n->rarg = $6;
+					n->usingClause = NIL; /* figure out which columns later... */
+					n->rangeClause = $5;
 					n->quals = NULL; /* fill later */
 					$$ = n;
 				}

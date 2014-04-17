@@ -391,6 +391,7 @@ typedef enum NodeTag
 	T_Constraint,
 	T_DefElem,
 	T_RangeClause,
+	T_RangeIntersectClause,
 	T_GroupRangeClause,
 	T_RangeTblEntry,
 	T_RangeTblFunction,

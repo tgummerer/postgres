@@ -991,6 +991,18 @@ typedef struct RangeClause
 } RangeClause;
 
 /*
+ * RangeIntersectClause-
+ *    representation of the RANGE clause for joins
+ */
+typedef struct RangeIntersectClause
+{
+	NodeTag		type;
+	List	   *column;
+	List	   *intersect_column;
+	List	   *new_column;
+} RangeIntersectClause;
+
+/*
  * GroupRangeClause-
  *    representation of GROUP BY RANGE clause
  */
